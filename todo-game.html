@@ -1,0 +1,522 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>To‑Do Game — Simple Daily Tracker</title>
+  <meta name="description" content="A simple, offline-friendly daily to-do list with a tiny game element. Add tasks with optional tags, roll over unfinished tasks, and keep a streak.">
+  <style>
+    :root{
+      --bg:#0f172a;
+      --panel:#111827;
+      --muted:#94a3b8;
+      --text:#e5e7eb;
+      --accent:#22c55e;
+      --accent-2:#38bdf8;
+      --danger:#f43f5e;
+      --chip:#1f2937;
+      --chip-text:#cbd5e1;
+      --border:#1f2937;
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --radius:14px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, "Helvetica Neue", Arial, Noto Sans, "Apple Color Emoji", "Segoe UI Emoji";
+      background: radial-gradient(1200px 800px at 80% -10%, #1f2937 0%, #0b1220 55%, #060a12 100%);
+      color:var(--text);
+      line-height:1.45;
+    }
+    .wrap{
+      max-width: 920px;
+      margin: 24px auto 80px;
+      padding: 0 16px;
+    }
+    header{
+      display:grid;
+      gap:16px;
+      margin-bottom:18px;
+    }
+    .title{
+      display:flex; align-items:center; gap:10px;
+    }
+    .logo{
+      width:36px;height:36px;border-radius:10px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      box-shadow: var(--shadow);
+    }
+    h1{
+      font-size: clamp(20px, 3.4vw, 34px);
+      margin:0; letter-spacing:.3px;
+    }
+    .sub{
+      color:var(--muted); font-size:14px;
+      display:flex; gap:10px; flex-wrap:wrap; align-items:center;
+    }
+    .quote{
+      padding:14px 16px; background:rgba(255,255,255,.04);
+      border:1px solid var(--border); border-radius: var(--radius);
+      font-size: 15px;
+    }
+    .quote em{ color:#e2e8f0 }
+    .panel{
+      background: rgba(2,6,23,.7);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 14px;
+    }
+    .row{display:flex; gap:10px; flex-wrap:wrap}
+    .row > *{flex:1}
+    input[type="text"], input[type="search"]{
+      background:#0b1220;border:1px solid var(--border);
+      border-radius:12px; color:var(--text);
+      padding:12px 14px; font-size:16px; width:100%;
+      outline:none;
+    }
+    input::placeholder{color:#64748b}
+    button{
+      background: linear-gradient(135deg, #16a34a, #22c55e);
+      color:white; border:none; padding:12px 16px;
+      border-radius:12px; font-weight:650; cursor:pointer;
+      box-shadow: var(--shadow);
+    }
+    button.secondary{
+      background: #0b1220;
+      border:1px solid var(--border);
+      color: var(--text);
+      box-shadow:none;
+    }
+    button.ghost{
+      background:transparent;border:1px dashed var(--border);
+      color:var(--muted);
+    }
+    .tasks{margin-top:12px}
+    .task{
+      display:grid; grid-template-columns: 28px 1fr auto;
+      gap:10px; align-items:flex-start;
+      padding:10px; border-bottom:1px solid #0b1322;
+    }
+    .task:last-child{border-bottom:none}
+    .task input[type="checkbox"]{
+      width:20px;height:20px;margin-top:2px;
+      accent-color: var(--accent);
+    }
+    .task .txt{line-height:1.35}
+    .task .txt .t{font-size:16px}
+    .task.done .t{text-decoration: line-through; color:#a7f3d0}
+    .chips{display:flex; gap:6px; flex-wrap:wrap; margin-top:6px}
+    .chip{
+      background: var(--chip); border:1px solid #263244;
+      color: var(--chip-text); font-size: 12px;
+      padding:4px 8px; border-radius:999px;
+    }
+    .meta{
+      display:flex; gap:10px; flex-wrap:wrap; align-items:center;
+      color:var(--muted); font-size:12px;
+    }
+    .meta .date{font-weight:600; color:#e2e8f0}
+    .score{
+      display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin: 14px 0 4px;
+    }
+    .card{
+      background: rgba(255,255,255,.04);
+      border:1px solid var(--border);
+      border-radius: 12px; padding: 12px;
+    }
+    .big{
+      font-size: clamp(22px, 4vw, 32px); font-weight:800;
+    }
+    .streak{display:flex; align-items:center; gap:8px; margin-top:6px}
+    .flame{width:18px;height:18px; background: conic-gradient(#f97316, #facc15, #fb7185, #f97316); border-radius:40% 40% 60% 60% / 50% 50% 50% 50%}
+    .hint{font-size:12px; color:var(--muted); margin-top:6px}
+    .controls{display:flex; gap:8px; flex-wrap:wrap; align-items:center}
+    .switcher{display:flex; gap:6px; flex-wrap:wrap}
+    .tag-filter button{padding:8px 10px; border-radius:10px; font-size:13px}
+    .empty{
+      color:#94a3b8; text-align:center; padding:18px;
+      border:1px dashed var(--border); border-radius:12px; margin-top:8px;
+    }
+    details{
+      margin-top:14px;
+      background: rgba(255,255,255,.04);
+      border:1px solid var(--border);
+      border-radius:12px; padding:10px 12px;
+    }
+    summary{cursor:pointer; font-weight:600}
+    .footer{
+      margin-top:24px; color:var(--muted); font-size:12px; text-align:center
+    }
+    /* Dialog */
+    dialog{
+      border:none; border-radius:16px; padding:0; width:min(520px, 92vw);
+      background: #0b1220; color: var(--text); box-shadow: var(--shadow);
+    }
+    .dlg-head{padding:16px 16px 8px; border-bottom:1px solid var(--border)}
+    .dlg-body{padding:16px}
+    .dlg-foot{padding:12px 16px 16px; display:flex; gap:8px; justify-content:flex-end; border-top:1px solid var(--border)}
+    .kbd{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      background:#0b1220; border:1px solid var(--border);
+      border-bottom-width:3px; border-radius:8px; padding:2px 6px; font-size:12px;
+      color:#e5e7eb;
+    }
+    @media (max-width:560px){
+      .task{grid-template-columns: 24px 1fr auto}
+      .row>*{flex: 100%}
+      .score{grid-template-columns: 1fr}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="title">
+        <div class="logo" aria-hidden="true"></div>
+        <h1>To‑Do Game</h1>
+      </div>
+      <div class="sub">
+        <span class="date" id="dateLabel"></span>
+        <span>•</span>
+        <span>Keep it simple. Keep the streak.</span>
+      </div>
+      <div class="quote" id="qotd" aria-live="polite"></div>
+    </header>
+
+    <section class="panel" aria-labelledby="addTaskHeading">
+      <h2 id="addTaskHeading" style="margin:4px 0 10px;font-size:18px">Add a task</h2>
+      <div class="row" role="form" aria-describedby="addHint">
+        <input id="taskText" type="text" placeholder="Task (e.g., Call mom)" autocomplete="off">
+        <input id="taskTags" type="text" placeholder="Tags (optional, e.g., work, personal)" autocomplete="off" aria-label="Tags, optional">
+        <button id="addBtn" title="Add task (Enter)">Add</button>
+      </div>
+      <div class="hint" id="addHint">Tip: Separate multiple tags with commas. Press <span class="kbd">Enter</span> to add quickly.</div>
+    </section>
+
+    <section class="score">
+      <div class="card">
+        <div>Points today</div>
+        <div class="big" id="points">0</div>
+        <div class="hint">+10 for each completed task, −5 for each unfinished task at midnight.</div>
+      </div>
+      <div class="card">
+        <div>Streak</div>
+        <div class="big" id="streak">0 days</div>
+        <div class="streak"><div class="flame"></div><div id="streakHint" class="hint">Keep ≥ 60 points to extend your streak.</div></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="controls">
+        <div class="switcher">
+          <button class="secondary" id="prevDayBtn" title="Previous day">◀</button>
+          <button class="secondary" id="todayBtn" title="Jump to today">Today</button>
+          <button class="secondary" id="nextDayBtn" title="Next day">▶</button>
+        </div>
+        <div style="margin-left:auto" class="tag-filter" id="tagFilter"></div>
+      </div>
+      <div class="meta" style="margin-top:10px">
+        <span class="date">List for <span id="dayLabel"></span></span>
+        <span id="counts"></span>
+      </div>
+      <div class="tasks" id="taskList" role="list"></div>
+      <div class="empty" id="emptyState" hidden>No tasks yet. Add your first one above.</div>
+    </section>
+
+    <details>
+      <summary>How the little game works</summary>
+      <ul>
+        <li><strong>Points:</strong> Each completed task is worth <strong>+10</strong>. Each unfinished task at the end of the day counts <strong>−5</strong>.</li>
+        <li><strong>Streak:</strong> If your net points for the day are <strong>60 or more</strong>, your streak continues; otherwise it resets.</li>
+        <li><strong>New Day:</strong> When a new day starts, you'll be asked if you want to import all <em>unfinished</em> tasks from yesterday.</li>
+        <li><strong>Tags:</strong> Tags are totally optional (e.g., <em>work</em>, <em>personal</em>). Use them to filter today’s list.</li>
+        <li><strong>Everything is stored locally</strong> on your device. No accounts needed.</li>
+      </ul>
+    </details>
+
+    <div class="footer">Made with care. Works offline. ✨</div>
+  </div>
+
+  <dialog id="rolloverDlg">
+    <div class="dlg-head"><h3 style="margin:0">New day, who dis?</h3></div>
+    <div class="dlg-body">
+      <p>It’s a fresh list for <strong id="dlgDate"></strong>.</p>
+      <p>Do you want to import all <em>unfinished</em> tasks from <strong id="dlgPrevDate"></strong>?</p>
+    </div>
+    <div class="dlg-foot">
+      <button class="ghost" id="skipImportBtn">Skip</button>
+      <button id="doImportBtn">Import tasks</button>
+    </div>
+  </dialog>
+
+<script>
+(function(){
+  // --- Utilities ---
+  const $ = sel => document.querySelector(sel);
+  const $el = (tag, props={}) => Object.assign(document.createElement(tag), props);
+  const pad = n => String(n).padStart(2,'0');
+  const todayStr = (d=new Date()) => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  const parseTags = s => (s||'').split(',').map(t=>t.trim()).filter(Boolean);
+  const uniq = arr => [...new Set(arr)];
+
+  // --- Quote of the Day ---
+  const QUOTES = [
+    ["Start where you are. Use what you have. Do what you can.","Arthur Ashe"],
+    ["We are what we repeatedly do. Excellence, then, is not an act, but a habit.","Will Durant"],
+    ["Do the hard things—they make the easy things easy.","Unknown"],
+    ["Small steps are still steps.","Unknown"],
+    ["Discipline is destiny.","Ryan Holiday"],
+    ["If it takes less than two minutes, do it now.","David Allen"],
+    ["The secret of getting ahead is getting started.","Mark Twain"],
+    ["Your future is built on what you do today.","Unknown"],
+    ["Focus on the next right thing.","Unknown"],
+    ["Simplicity is the ultimate sophistication.","Leonardo da Vinci"]
+  ];
+  function setQuoteFor(dateStr){
+    const sum = [...dateStr].reduce((a,c)=>a+c.charCodeAt(0),0);
+    const [q,who] = QUOTES[sum % QUOTES.length];
+    $("#qotd").innerHTML = `<em>“${q}”</em> — ${who}`;
+  }
+
+  // --- Storage Model ---
+  const S = {
+    getDay(dateStr){
+      try{
+        return JSON.parse(localStorage.getItem(`todo.tasks:${dateStr}`) || "[]");
+      }catch{ return [] }
+    },
+    setDay(dateStr, tasks){
+      localStorage.setItem(`todo.tasks:${dateStr}`, JSON.stringify(tasks));
+      this.rememberDate(dateStr);
+    },
+    rememberDate(dateStr){
+      const key="todo.days";
+      const days = new Set(JSON.parse(localStorage.getItem(key) || "[]"));
+      days.add(dateStr);
+      localStorage.setItem(key, JSON.stringify([...days].sort()));
+    },
+    lastDate(){
+      return localStorage.getItem("todo.lastDate");
+    },
+    setLastDate(dateStr){
+      localStorage.setItem("todo.lastDate", dateStr);
+    },
+    streak(){
+      return Number(localStorage.getItem("todo.streak") || "0");
+    },
+    setStreak(n){
+      localStorage.setItem("todo.streak", String(n));
+    },
+    setDayScore(dateStr, score){
+      localStorage.setItem(`todo.score:${dateStr}`, String(score));
+    },
+    getDayScore(dateStr){
+      const v = localStorage.getItem(`todo.score:${dateStr}`);
+      return v==null ? null : Number(v);
+    }
+  };
+
+  // --- State ---
+  let currentDate = todayStr();
+
+  // --- Gamification ---
+  function computeLivePoints(tasks){
+    const done = tasks.filter(t=>t.done).length;
+    const todo = tasks.length - done;
+    // Live points count only completed; unfinished penalty is baked "at midnight".
+    return done*10;
+  }
+  function settleYesterdayIfNeeded(prevDate){
+    // If yesterday hasn't been settled (score missing), compute and store it & update streak.
+    const stored = S.getDayScore(prevDate);
+    if(stored!=null) return; // already settled
+    const tasks = S.getDay(prevDate);
+    const done = tasks.filter(t=>t.done).length;
+    const todo = tasks.length - done;
+    const score = done*10 - todo*5;
+    S.setDayScore(prevDate, score);
+
+    // Update streak based on score
+    const prevStreak = S.streak();
+    const newStreak = score >= 60 ? prevStreak + 1 : 0;
+    S.setStreak(newStreak);
+  }
+
+  // --- UI: render & bind ---
+  function render(){
+    const dateHuman = new Date(currentDate + "T12:00:00").toLocaleDateString(undefined, {weekday:'long', month:'short', day:'numeric', year:'numeric'});
+    $("#dateLabel").textContent = dateHuman;
+    $("#dayLabel").textContent = dateHuman;
+    setQuoteFor(currentDate);
+
+    const tasks = S.getDay(currentDate);
+    const list = $("#taskList");
+    list.innerHTML = "";
+
+    // Tag filter buttons
+    const allTags = uniq(tasks.flatMap(t=>t.tags||[]));
+    const tagFilterEl = $("#tagFilter");
+    tagFilterEl.innerHTML = "";
+    if(allTags.length){
+      const label = $el('span', {textContent:"Filter:"}); label.className="hint";
+      tagFilterEl.appendChild(label);
+      const allBtn = $el('button', {textContent:"All"}); allBtn.className="secondary"; allBtn.dataset.tag="";
+      tagFilterEl.appendChild(allBtn);
+      allTags.forEach(tag=>{
+        const b = $el('button', {textContent: tag}); b.className="secondary"; b.dataset.tag=tag;
+        tagFilterEl.appendChild(b);
+      });
+    }
+
+    const filterTag = tagFilterEl.querySelector('button.active')?.dataset.tag || "";
+    const filtered = filterTag ? tasks.filter(t=>t.tags?.includes(filterTag)) : tasks;
+
+    if(filtered.length===0){
+      $("#emptyState").hidden = tasks.length>0; // hide if tasks exist but filtered out
+    }else{
+      $("#emptyState").hidden = true;
+    }
+
+    filtered.forEach(t=>{
+      const row = $el('div'); row.className = "task" + (t.done ? " done": ""); row.role = "listitem";
+      const cb = $el('input', {type:'checkbox'}); cb.checked = !!t.done;
+      cb.addEventListener('change', ()=>{
+        t.done = cb.checked;
+        S.setDay(currentDate, tasks);
+        render();
+      });
+      const txt = $el('div', {className:'txt'});
+      const title = $el('div', {className:'t', textContent: t.text});
+      txt.appendChild(title);
+      if(t.tags?.length){
+        const chips = $el('div', {className:'chips'});
+        t.tags.forEach(tag=>{
+          chips.appendChild($el('span', {className:'chip', textContent: tag}));
+        });
+        txt.appendChild(chips);
+      }
+      const del = $el('button', {className:'secondary', textContent:'Delete', title:'Delete task'});
+      del.addEventListener('click', ()=>{
+        const idx = tasks.findIndex(x=>x.id===t.id);
+        if(idx>-1){ tasks.splice(idx,1); S.setDay(currentDate, tasks); render(); }
+      });
+      row.append(cb, txt, del);
+      list.appendChild(row);
+    });
+
+    // Counts & points
+    const done = tasks.filter(t=>t.done).length;
+    const total = tasks.length;
+    $("#counts").textContent = `(${done}/${total} completed)`;
+    $("#points").textContent = computeLivePoints(tasks);
+
+    // Streak
+    $("#streak").textContent = `${S.streak()} day${S.streak()===1?'':'s'}`;
+  }
+
+  // --- Add task ---
+  function addTask(){
+    const text = $("#taskText").value.trim();
+    if(!text) return;
+    const tags = uniq(parseTags($("#taskTags").value));
+    const tasks = S.getDay(currentDate);
+    tasks.push({ id: crypto.randomUUID(), text, tags, done:false, createdAt: Date.now() });
+    S.setDay(currentDate, tasks);
+    $("#taskText").value = "";
+    $("#taskTags").value = "";
+    render();
+  }
+
+  // --- Day navigation ---
+  function jumpTo(dateStr){
+    currentDate = dateStr;
+    S.setLastDate(dateStr);
+    render();
+  }
+  function stepDay(delta){
+    const d = new Date(currentDate + "T12:00:00");
+    d.setDate(d.getDate()+delta);
+    jumpTo(todayStr(d));
+  }
+
+  // --- Rollover on first open of the day ---
+  function maybeRollover(){
+    const t = todayStr();
+    const last = S.lastDate();
+    if(!last){ S.setLastDate(t); return; }
+    if(last === t) return;
+
+    // settle yesterday's score + streak
+    settleYesterdayIfNeeded(last);
+
+    // check if there are unfinished tasks to import
+    const prevTasks = S.getDay(last);
+    const unfin = prevTasks.filter(x=>!x.done);
+
+    const dlg = $("#rolloverDlg");
+    $("#dlgDate").textContent = new Date(t+"T12:00:00").toLocaleDateString();
+    $("#dlgPrevDate").textContent = new Date(last+"T12:00:00").toLocaleDateString();
+    if(unfin.length>0){
+      dlg.showModal();
+      $("#doImportBtn").onclick = ()=>{
+        const todays = S.getDay(t);
+        const carry = unfin.map(u => ({ id: crypto.randomUUID(), text:u.text, tags:u.tags||[], done:false, createdAt: Date.now() }));
+        S.setDay(t, todays.concat(carry));
+        dlg.close();
+        S.setLastDate(t);
+        jumpTo(t);
+      };
+      $("#skipImportBtn").onclick = ()=>{
+        dlg.close();
+        S.setLastDate(t);
+        jumpTo(t);
+      };
+    }else{
+      // no unfinished – just flip the day
+      S.setLastDate(t);
+    }
+  }
+
+  // --- Tag filtering interactions ---
+  $("#tagFilter").addEventListener('click', (e)=>{
+    if(e.target.tagName!=="BUTTON") return;
+    const parent = $("#tagFilter");
+    parent.querySelectorAll('button').forEach(b=>b.classList.remove('active'));
+    e.target.classList.add('active');
+    render();
+  });
+
+  // --- Bindings ---
+  $("#addBtn").addEventListener('click', addTask);
+  $("#taskText").addEventListener('keydown', (e)=>{
+    if(e.key==="Enter"){ addTask(); }
+  });
+  $("#taskTags").addEventListener('keydown', (e)=>{
+    if(e.key==="Enter"){ addTask(); }
+  });
+  $("#prevDayBtn").addEventListener('click', ()=>stepDay(-1));
+  $("#nextDayBtn").addEventListener('click', ()=>stepDay(1));
+  $("#todayBtn").addEventListener('click', ()=>jumpTo(todayStr()));
+
+  // --- Init ---
+  function init(){
+    // First-run defaults
+    if(!S.lastDate()){ S.setLastDate(todayStr()); }
+    // Rollover check
+    maybeRollover();
+
+    // Start on last opened day (usually today)
+    const start = S.lastDate() || todayStr();
+    currentDate = start;
+
+    // Quote & labels
+    setQuoteFor(currentDate);
+    render();
+  }
+  init();
+})();
+</script>
+</body>
+</html>
